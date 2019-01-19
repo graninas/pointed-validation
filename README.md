@@ -5,6 +5,8 @@ An approach to data validation of any kind data types.
 - Pointed: marks a path to the error through fields using pointed getters.
 - Combinatorial: compose bigger validators from smaller ones.
 
+---
+
 - [Validation](#Validation)
   - [Result types](#Result-types)
   - [Basic validators](#Basic-validators)
