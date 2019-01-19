@@ -85,6 +85,8 @@ makePointedGetters ''Outer
 User's validators.
 
 ```haskell
+-- mbField', intField1' etc. are "pointed getters"
+
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
     <$> (inner ^. mbField'   & condition "Inner mbField: should be Just a" isJust)
