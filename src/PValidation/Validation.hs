@@ -13,17 +13,27 @@ import           Data.Text       (Text)
 import           Data.Validation (Validation (..))
 import           GHC.Generics    (Generic)
 
+-- | Name of field that is being validated.
 type ValidationPoint = Text
+
+-- | Path to the validation field.
 type Path = [ValidationPoint]
 
 type ErrorMessage = Text
 
+-- | A single validation error type.
 data ValidationError = ValidationError
     { path         :: Path
+      -- ^ Path to the invalid field througth a structure.
+      -- Example: ["Outer","innerField","Inner","intField1"]
+      -- `Outer` and `Inner` are type names
+      -- `innerField`, `intField1` are field names.
     , errorMessage :: ErrorMessage
+      -- ^ Error message.
     }
     deriving (Eq, Show, Ord, Generic)
 
+-- | Validation errors.
 type ValidationErrors = [ValidationError]
 
 type ValidationObject a = (Path, a)
