@@ -5,7 +5,14 @@ An approach to data validation of any kind data types.
 - Pointed: marks a path to the error through fields using pointed getters.
 - Combinatorial: compose bigger validators from smaller ones.
 
-# Validation result types
+- [Validation](#Validation)
+  - [Result types](#Result-types)
+  - [Basic validators](#Basic-validators)
+- [Example](#Example)
+
+# Validation
+
+### Result types
 
 ```haskell
 -- | Name of field that is being validated.
@@ -30,6 +37,18 @@ data ValidationError = ValidationError
 
 -- | Validation errors.
 type ValidationErrors = [ValidationError]
+```
+
+### Basic validators
+
+```haskell
+-- | Conditional validator.
+-- Checks for validity.
+condition :: ErrorMessage -> (a -> Bool) -> Validator a
+
+-- | Treats a field as valid.
+-- HasItem is a typeclass for pointed getter.
+valid :: HasItem a b => a -> Validation ValidationErrors b
 ```
 
 # Example
@@ -59,18 +78,6 @@ makePointedGetters ''Inner      -- Comes with this library
 
 makeFieldsNoPrefix ''Outer
 makePointedGetters ''Outer
-```
-
-Basic validators:
-
-```haskell
--- | Conditional validator.
--- Checks for validity.
-condition :: ErrorMessage -> (a -> Bool) -> Validator a
-
--- | Treats a field as valid.
--- HasItem is a typeclass for pointed getter.
-valid :: HasItem a b => a -> Validation ValidationErrors b
 ```
 
 User's validators.
