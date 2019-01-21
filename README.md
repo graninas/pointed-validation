@@ -99,7 +99,7 @@ main = do
 In more complex case you might want to combine two or more validators
 to validate a tree-like data structure.
 
-# Nested structures validation
+### Nested structures validation
 
 Now we'll create validators for the following two-level structure:
 
