@@ -18,13 +18,13 @@ import           PValidation
 
 data Inner = Inner
     { _mbField    :: Maybe Int
-    , _intField1  :: Int
+    , _intField   :: Int
     , _tupleField :: (Int, String)
     }
     deriving (Show, Eq)
 
 data Outer = Outer
-    { _intField2   :: Int
+    { _intField    :: Int
     , _stringField :: String
     , _innerField  :: Inner
     }
@@ -39,7 +39,7 @@ makePointedGetters ''Outer
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
     <$> (inner ^. mbField'   & condition isJust "Inner mbField: should be Just a")
-    <*> (inner ^. intField1'
+    <*> (inner ^. intField'
             &  condition (> 0)   "Inner intField: should be > 0"
             &. condition (< 100) "Inner intField: should be < 100"
         )
@@ -47,7 +47,7 @@ innerValidator = validator $ \inner -> Inner
 
 outerValidator :: Validator Outer
 outerValidator = validator $ \outer -> Outer
-    <$> (outer ^. intField2' & condition (> 0) "Outer intField: should be > 0")
+    <$> (outer ^. intField' & condition (> 0) "Outer intField: should be > 0")
     <*> (outer ^. stringField'
           &  condition (checkNotStarts 'A') "Outer stringField: should not start from A"
           &. condition (checkNotEnds   'A') "Outer stringField: should not end by A"
@@ -62,26 +62,26 @@ outerValidator = validator $ \outer -> Outer
 
 invalidInner :: Inner
 invalidInner = Inner
-    { _mbField   = Just 10    -- valid   (should be Just)
-    , _intField1 = 0          -- invalid (should be > 0)
-    , _tupleField = (1, "A")  -- always valid
+    { _mbField    = Just 10    -- valid   (should be Just)
+    , _intField   = 0          -- invalid (should be > 0)
+    , _tupleField = (1, "A")   -- always valid
     }
 
 invalidOuter :: Outer
 invalidOuter = Outer
-    { _intField2   = 0             -- invalid (should be > 0)
+    { _intField    = 0             -- invalid (should be > 0)
     , _stringField = "AbbA"        -- invalid (should not start end end by 'A')
     , _innerField  = invalidInner  -- invalid internal structure
     }
 
 innerValidationErrors =
-    [ ValidationError { path = ["Outer","innerField","Inner","intField1"], errorMessage = "Inner intField: should be > 0"}
+    [ ValidationError { path = ["innerField","intField"], errorMessage = "Inner intField: should be > 0"}
     ]
 
 outerValidationErrors =
-    [ ValidationError {path = ["Outer","intField2"],   errorMessage = "Outer intField: should be > 0"}
-    , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not start from A"}
-    , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not end by A"}
+    [ ValidationError {path = ["intField"],    errorMessage = "Outer intField: should be > 0"}
+    , ValidationError {path = ["stringField"], errorMessage = "Outer stringField: should not start from A"}
+    , ValidationError {path = ["stringField"], errorMessage = "Outer stringField: should not end by A"}
     ]
 
 spec :: Spec

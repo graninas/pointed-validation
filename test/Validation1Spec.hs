@@ -21,7 +21,7 @@ data Inner = Inner
   deriving (Show, Eq)
 
 data Middle = Middle
-  { _intField2  :: Int
+  { _intField   :: Int
   , _floatField :: Float
   , _tupleField :: (Int, String)
   , _innerField :: Inner
@@ -32,7 +32,6 @@ data Outer = Outer
   , _stringField :: String
   , _middleField :: Middle
   }
-
 
 makeFieldsNoPrefix ''Inner
 makePointedGetters ''Inner
@@ -49,7 +48,7 @@ innerValidator = validator $ \inner -> Inner
 
 middleValidator :: Validator Middle
 middleValidator = validator $ \middle -> Middle
-    <$> (middle ^. intField2'  & condition (> 0) "Middle intField: > 0")
+    <$> (middle ^. intField'   & condition (> 0) "Middle intField: > 0")
     <*> (middle ^. floatField' & alwaysValid)
     <*> (middle ^. tupleField' & condition (\(i, s) -> show i == s) "Middle show fst == snd" )
     <*> (nested middle innerField' innerValidator)
@@ -62,7 +61,7 @@ outerValidator = validator $ \outer -> Outer
 
 invalidMiddle :: Middle
 invalidMiddle = Middle
-    { _intField2 = (-10)
+    { _intField   = (-10)
     , _floatField = 1.1
     , _tupleField = (10, "abc")
     , _innerField = Inner
@@ -72,7 +71,7 @@ invalidMiddle = Middle
 
 invalidOuter :: Outer
 invalidOuter = Outer
-  { _intField = 10
+  { _intField    = 10
   , _stringField = ""
   , _middleField = invalidMiddle
   }
@@ -83,17 +82,17 @@ inner = Inner
   }
 
 innerValidationErrors = [
-  ValidationError { path = ["Outer","middleField","Middle","innerField","Inner","mbField"], errorMessage = "Inner mbField: Just a"}
+  ValidationError { path = ["middleField","innerField","mbField"], errorMessage = "Inner mbField: Just a"}
   ]
 
 middleValidationErrors = [
-  ValidationError {path = ["Outer","middleField","Middle","intField2"], errorMessage = "Middle intField: > 0"},
-  ValidationError {path = ["Outer","middleField","Middle","tupleField"], errorMessage = "Middle show fst == snd"}
+  ValidationError {path = ["middleField","intField"],   errorMessage = "Middle intField: > 0"},
+  ValidationError {path = ["middleField","tupleField"], errorMessage = "Middle show fst == snd"}
   ]
 
 outerValidationErrors = [
-  ValidationError {path = ["Outer","intField"], errorMessage = "Outer intField: < 0"},
-  ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: not empty"}
+  ValidationError {path = ["intField"],    errorMessage = "Outer intField: < 0"},
+  ValidationError {path = ["stringField"], errorMessage = "Outer stringField: not empty"}
   ]
 
 spec :: Spec

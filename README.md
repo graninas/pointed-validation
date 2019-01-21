@@ -14,6 +14,7 @@ An approach to data validation that is:
   - [Intro](#Intro)
   - [Basic usage](#basic-usage)
   - [Nested structures validation](#Nested structures validation)
+- [Limitations](#limitations)
 
 # Validation
 
@@ -71,7 +72,8 @@ intField' = mkPointedGetter "intField" ["intField"] intField
 
 The next step is to create a validator for values of `MyDataType`.
 Suppose, the value should be in the range (100, 200) to be valid.
-The validator will look like the following:
+The validator will look like the following, notice how the two checks
+are combined with the combinator `(&.)`:
 
 ```haskell
 validator :: Validator MyDataType
@@ -81,10 +83,6 @@ validator = validator $ \val -> MyDataType
             &. condition (< 100) "intField: should be < 200"
         )
 ```
-
-Notice how the two checks are combined with the combinator (&.).
-In fact, the validator reconstructs your value applicatively, so you
-probably don't want to use this kind validation if you need a good performance.
 
 Applying the validator:
 
@@ -97,7 +95,7 @@ main = do
       SuccessResult _      -> putStrLn "Valid."
 
   -- Output:
-  -- [ ValidationError {path = ["MyDataType","intField"], errorMessage = "intField: should be > 100"}]
+  -- [ ValidationError {path = [intField"], errorMessage = "intField: should be > 100"}]
 ```
 
 In more complex case you might want to combine two or more validators
@@ -110,13 +108,13 @@ Now we'll create validators for the following two-level structure:
 ```haskell
 data Inner = Inner
     { _mbField    :: Maybe Int
-    , _intField1  :: Int
+    , _intField   :: Int
     , _tupleField :: (Int, String)
     }
     deriving (Show, Eq)
 
 data Outer = Outer
-    { _intField2   :: Int
+    { _intField    :: Int
     , _stringField :: String
     , _innerField  :: Inner
     }
@@ -131,11 +129,11 @@ makePointedGetters ''Outer
 
 The `Inner` value will be valid if:
   - `_mbField` is `Just smth`;
-  - `_intField1` is in range (0, 100);
+  - `_intField` is in range (0, 100);
   - `_tupleField` is always valid.
 
 The `Outer` value will be valid if:
-  - `_intField2` is > 0;
+  - `_intField` is > 0;
   - `_stringField` should not start and end by 'A' and should be not null;
   - `_innerField` should be valid.
 
@@ -147,7 +145,7 @@ to apply the `innerValidator`:
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
     <$> (inner ^. mbField'   & condition isJust "Inner mbField: should be Just a")
-    <*> (inner ^. intField1'
+    <*> (inner ^. intField'
             &  condition (> 0)   "Inner intField: should be > 0"
             &. condition (< 100) "Inner intField: should be < 100"
         )
@@ -155,7 +153,7 @@ innerValidator = validator $ \inner -> Inner
 
 outerValidator :: Validator Outer
 outerValidator = validator $ \outer -> Outer
-    <$> (outer ^. intField2' & condition (> 0) "Outer intField: should be > 0")
+    <$> (outer ^. intField' & condition (> 0) "Outer intField: should be > 0")
     <*> (outer ^. stringField'
           &  condition (checkNotStarts 'A') "Outer stringField: should not start from A"
           &. condition (checkNotEnds   'A') "Outer stringField: should not end by A"
@@ -174,14 +172,14 @@ Applying the `outerValidator` has no surprises:
 ```haskell
 invalidInner :: Inner
 invalidInner = Inner
-    { _mbField   = Just 10    -- valid   (should be Just)
-    , _intField1 = 0          -- invalid (should be > 0)
-    , _tupleField = (1, "A")  -- always valid
+    { _mbField    = Just 10    -- valid   (should be Just)
+    , _intField   = 0          -- invalid (should be > 0)
+    , _tupleField = (1, "A")   -- always valid
     }
 
 invalidOuter :: Outer
 invalidOuter = Outer
-    { _intField2   = 0             -- invalid (should be > 0)
+    { _intField    = 0             -- invalid (should be > 0)
     , _stringField = "AbbA"        -- invalid (should not start end end by 'A')
     , _innerField  = invalidInner  -- invalid internal structure
     }
@@ -195,9 +193,15 @@ main = do
 
 -- Output:
 --
--- [ ValidationError { path = ["Outer","innerField","Inner","intField1"], errorMessage = "Inner intField: should be > 0"}
--- , ValidationError {path = ["Outer","intField2"],   errorMessage = "Outer intField: should be > 0"}
--- , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not start from A"}
--- , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not end by A"}
+-- [ ValidationError {path = ["innerField",intField"], errorMessage = "Inner intField: should be > 0"}
+-- , ValidationError {path = ["intField"], errorMessage = "Outer intField: should be > 0"}
+-- , ValidationError {path = ["stringField"], errorMessage = "Outer stringField: should not start from A"}
+-- , ValidationError {path = ["stringField"], errorMessage = "Outer stringField: should not end by A"}
 -- ]
 ```
+
+# Limitations
+
+- Requires `makeFieldsNoPrefix`.
+- Fields with the same name should have the same type.
+  - Alternatively, such pointed getters can be created in different scopes and imported with qualification.

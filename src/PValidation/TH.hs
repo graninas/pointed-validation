@@ -53,29 +53,34 @@ makePointedGetter'' (nameBase -> strNodeName) names (adtFieldName, _, fieldType)
   mbGetterInstanceName <- lookupTypeName $ "Has" ++ capitalizedFieldName
   mbGetterName         <- lookupTypeName "Getter"
   pointedLensName      <- newName $ fieldName ++ "'"
+  mbPointedLens        <- lookupValueName $ nameBase pointedLensName
   plainAName           <- newName "a"
 
-  case (mbGetterInstanceName, mbGetterName, mbLensName) of
-    (Nothing, _, _) -> error "Lens getter not found (are you using `makeFieldsNoPrefix` lens constructor?)."
-    (_, Nothing, _) -> error "Getter not found (are you using `makeFieldsNoPrefix` lens constructor?)."
-    (_, _, Nothing) -> error "Lens not found."
-    (Just lensGetterInstanceName, Just getterName, Just lensName) -> pure
-        [ SigD pointedLensName
-               (ForallT [PlainTV plainAName]
-                        [AppT (AppT (ConT lensGetterInstanceName) (VarT plainAName)) fieldType ]
-                        (AppT (AppT (ConT getterName) (VarT plainAName))
-                              (AppT
-                                  (AppT (TupleT 2) (ConT pathTypeName))
-                                  fieldType
-                               )))
-        , FunD pointedLensName
-               [Clause [] (NormalB
-                            (AppE
-                              (AppE
-                                (AppE
-                                  (VarE mkPointedGetterName) (LitE (StringL fieldName))
-                                ) (ListE [LitE (StringL strNodeName)])
-                              ) (VarE lensName))) []]]
+  case mbPointedLens of
+      Just _ -> pure []
+      Nothing -> case (mbGetterInstanceName, mbGetterName, mbLensName) of
+          (Nothing, _, _) -> error "Lens getter not found (are you using `makeFieldsNoPrefix` lens constructor?)."
+          (_, Nothing, _) -> error "Getter not found (are you using `makeFieldsNoPrefix` lens constructor?)."
+          (_, _, Nothing) -> error "Lens not found."
+          (Just lensGetterInstanceName, Just getterName, Just lensName) -> pure
+              [ SigD pointedLensName
+                     (ForallT [PlainTV plainAName]
+                              [AppT (AppT (ConT lensGetterInstanceName) (VarT plainAName)) fieldType ]
+                              (AppT (AppT (ConT getterName) (VarT plainAName))
+                                    (AppT
+                                        (AppT (TupleT 2) (ConT pathTypeName))
+                                        fieldType
+                                     )))
+              , FunD pointedLensName
+                     [Clause [] (NormalB
+                                  (AppE
+                                    (AppE
+                                      (AppE
+                                        (VarE mkPointedGetterName) (LitE (StringL fieldName))
+                                      -- Type names are not included into the path.
+                                      ) (ListE [])
+                                      -- ) (ListE [LitE (StringL strNodeName)])
+                                    ) (VarE lensName))) []]]
 
 makePointedGetter' :: NodeName -> Names -> Con -> Q [Dec]
 makePointedGetter' nodeName names (RecC _ vbgs)
