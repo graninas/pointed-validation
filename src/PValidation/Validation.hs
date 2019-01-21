@@ -64,32 +64,51 @@ instance HasItem a a where
 mkPointedGetter :: ValidationPoint -> Path -> Lens' a b -> Getter a (Path, b)
 mkPointedGetter point path lens = to $ \a -> (path ++ [point], a ^. lens)
 
--- | Accepts validator, structure to validate, error message and applicative (or monadic) action
--- to evaluate if the validation was successful.
--- Returns validated result.
-withValidation
+-- | Applies validator to the value (with error message).
+applyValidator'
+    :: Validator a
+    -> ErrorMessage
+    -> a
+    -> Result a
+applyValidator' validator msg a = case validator (["object"], a) of
+    Success _ -> SuccessResult a
+    Failure e -> ErrorResult msg e
+
+-- | Applies validator to the value.
+applyValidator
+    :: Validator a
+    -> ErrorMessage
+    -> a
+    -> Result a
+applyValidator validator msg a = case validator (["object"], a) of
+    Success _ -> SuccessResult a
+    Failure e -> ErrorResult msg e
+
+-- | Like `withValidation` but accepts a general error message.
+withValidation'
     :: Applicative m
     => Validator a
     -> (a -> m b)
     -> ErrorMessage
     -> a
     -> m (Result b)
-withValidation validator m msg a = case validator (["object"], a) of
+withValidation' validator m msg a = case validator (["object"], a) of
     Success _ -> SuccessResult <$> m a
     Failure e -> pure $ ErrorResult msg e
 
--- | Like `withValidation'` but doesn't require general error message.
-withValidation'
+-- | Accepts validator, structure to validate and applicative (or monadic) action
+-- to evaluate if the validation was successful.
+-- Returns validated result.
+withValidation
     :: Applicative m
     => Validator a
     -> (a -> m b)
     -> a
     -> m (Result b)
-withValidation' validator m = withValidation validator m "Validation failed."
+withValidation validator m = withValidation' validator m ""
 
-mkPrefix :: Path -> ValidationError -> ValidationError
-mkPrefix prefixPath (ValidationError path msg) = ValidationError (prefixPath ++ path) msg
-
+-- | This combinator allows to nest one validator into another with
+-- collecting the path.
 nested
     :: a
     -> Getter a (Path, b)
@@ -100,8 +119,27 @@ nested item g v = case v x of
     Failure es -> Failure $ map (mkPrefix fieldPath) es
     where
         x@(fieldPath, _) = item ^. g
+        mkPrefix :: Path -> ValidationError -> ValidationError
+        mkPrefix prefixPath (ValidationError path msg) = ValidationError (prefixPath ++ path) msg
 
+-- | Constructs a validator from validation function.
 validator
     :: (a -> Validation ValidationErrors a)
     -> Validator a
 validator validationF = validationF . getItem
+
+
+-- | Treats a field as always valid.
+-- HasItem is a typeclass for pointed getter.
+alwaysValid :: HasItem a b => a -> Validation ValidationErrors b
+alwaysValid = Success . getItem
+
+-- | Composes two validators.
+(&.) :: Validator a -> Validator a -> Validator a
+(&.) v1F v2F obj = case (v1F obj, v2F obj) of
+    (Success a,     Success _)     -> Success a
+    (Failure errs,  Success _)     -> Failure errs
+    (Success _,     Failure errs)  -> Failure errs
+    (Failure errs1, Failure errs2) -> Failure $ errs1 ++ errs2
+
+infixl 6 &.

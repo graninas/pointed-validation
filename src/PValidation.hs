@@ -7,7 +7,11 @@ module PValidation
 
 import           Data.Validation        (Validation (..))
 import           PValidation.TH         (makePointedGetters)
-import           PValidation.Validation (ErrorMessage, Path, Result (..), ValidationError (..),
-                                         ValidationErrors, ValidationPoint, Validator, mkPointedGetter,
-                                         nested, validator, withValidation, withValidation')
+import           PValidation.Validation (ErrorMessage, Path, Result (..),
+                                         ValidationError (..), ValidationErrors,
+                                         ValidationPoint, Validator,
+                                         alwaysValid, applyValidator,
+                                         applyValidator', mkPointedGetter,
+                                         nested, validator, withValidation,
+                                         withValidation', (&.))
 import           PValidation.Validators

@@ -7,12 +7,7 @@ import           PValidation.Validation (ErrorMessage, HasItem,
 
 -- | Conditional validator.
 -- Checks for validity.
-condition :: ErrorMessage -> (a -> Bool) -> Validator a
-condition msg cond (path, a) = case cond a of
+condition :: (a -> Bool) -> ErrorMessage -> Validator a
+condition cond msg (path, a) = case cond a of
     True  -> Success a
     False -> Failure [ValidationError path msg]
-
--- | Treats a field as valid.
--- HasItem is a typeclass for pointed getter.
-valid :: HasItem a b => a -> Validation ValidationErrors b
-valid = Success . getItem

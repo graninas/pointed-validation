@@ -45,19 +45,19 @@ makePointedGetters ''Outer
 
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
-    <$> (inner ^. mbField' & condition "Inner mbField: Just a" isJust)
+    <$> (inner ^. mbField' & condition isJust "Inner mbField: Just a")
 
 middleValidator :: Validator Middle
 middleValidator = validator $ \middle -> Middle
-    <$> (middle ^. intField2' & condition "Middle intField: > 0" (> 0))
-    <*> (middle ^. floatField' & valid)
-    <*> (middle ^. tupleField' & condition "Middle show fst == snd" (\(i, s) -> show i == s))
+    <$> (middle ^. intField2'  & condition (> 0) "Middle intField: > 0")
+    <*> (middle ^. floatField' & alwaysValid)
+    <*> (middle ^. tupleField' & condition (\(i, s) -> show i == s) "Middle show fst == snd" )
     <*> (nested middle innerField' innerValidator)
 
 outerValidator :: Validator Outer
 outerValidator = validator $ \outer -> Outer
-    <$> (outer ^. intField' & condition "Outer intField: < 0" (< 0))
-    <*> (outer ^. stringField' & condition "Outer stringField: not empty" (not . null))
+    <$> (outer ^. intField'    & condition (< 0)        "Outer intField: < 0")
+    <*> (outer ^. stringField' & condition (not . null) "Outer stringField: not empty" )
     <*> (nested outer middleField' middleValidator)
 
 invalidMiddle :: Middle
@@ -100,15 +100,15 @@ spec :: Spec
 spec = describe "Validation test" $ do
 
   it "Validation failed" $ do
-    result <- withValidation' outerValidator pure invalidOuter
+    result <- withValidation outerValidator pure invalidOuter
     case result of
       SuccessResult _                   -> fail "Unexpected success"
       ErrorResult errMsg validationErrs -> do
-        errMsg `shouldBe` "Validation failed."
+        errMsg `shouldBe` ""
         validationErrs `shouldBe` (outerValidationErrors ++ middleValidationErrors ++ innerValidationErrors)
 
   it "Validation succeeded" $ do
-    result <- withValidation' innerValidator pure inner
+    result <- withValidation innerValidator pure inner
     case result of
       ErrorResult errMsg validationErrs -> fail "Unexpected failure"
       SuccessResult r                   -> r `shouldBe` inner

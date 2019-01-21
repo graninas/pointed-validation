@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE ViewPatterns           #-}
 
 module Validation2Spec where
 
@@ -16,8 +17,9 @@ import           Data.Maybe      (isJust)
 import           PValidation
 
 data Inner = Inner
-    { _mbField   :: Maybe Int
-    , _intField1 :: Int
+    { _mbField    :: Maybe Int
+    , _intField1  :: Int
+    , _tupleField :: (Int, String)
     }
     deriving (Show, Eq)
 
@@ -36,25 +38,39 @@ makePointedGetters ''Outer
 
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
-    <$> (inner ^. mbField'   & condition "Inner mbField: should be Just a" isJust)
-    <*> (inner ^. intField1' & condition "Inner intField: should be > 0" (> 0))
+    <$> (inner ^. mbField'   & condition isJust "Inner mbField: should be Just a")
+    <*> (inner ^. intField1'
+            &  condition (> 0)   "Inner intField: should be > 0"
+            &. condition (< 100) "Inner intField: should be < 100"
+        )
+    <*> (inner ^. tupleField' & alwaysValid)
 
 outerValidator :: Validator Outer
 outerValidator = validator $ \outer -> Outer
-    <$> (outer ^. intField2'   & condition "Outer intField: should be > 0" (> 0))
-    <*> (outer ^. stringField' & condition "Outer stringField: should be not empty" (not . null))
+    <$> (outer ^. intField2' & condition (> 0) "Outer intField: should be > 0")
+    <*> (outer ^. stringField'
+          &  condition (checkNotStarts 'A') "Outer stringField: should not start from A"
+          &. condition (checkNotEnds   'A') "Outer stringField: should not end by A"
+          &. condition (not . null)         "Outer stringField: should not be null"
+        )
     <*> (nested outer innerField' innerValidator)
+  where
+    checkNotStarts ch []      = True
+    checkNotStarts ch (ch':_) = ch' /= ch
+    checkNotEnds   ch []            = True
+    checkNotEnds   ch (last -> ch') = ch' /= ch
 
 invalidInner :: Inner
 invalidInner = Inner
-    { _mbField   = Just 10    -- valid
+    { _mbField   = Just 10    -- valid   (should be Just)
     , _intField1 = 0          -- invalid (should be > 0)
+    , _tupleField = (1, "A")  -- always valid
     }
 
 invalidOuter :: Outer
 invalidOuter = Outer
     { _intField2   = 0             -- invalid (should be > 0)
-    , _stringField = ""            -- invalid (should be not null)
+    , _stringField = "AbbA"        -- invalid (should not start end end by 'A')
     , _innerField  = invalidInner  -- invalid innternal structure
     }
 
@@ -64,23 +80,23 @@ innerValidationErrors =
 
 outerValidationErrors =
     [ ValidationError {path = ["Outer","intField2"],   errorMessage = "Outer intField: should be > 0"}
-    , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should be not empty"}
+    , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not start from A"}
+    , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not end by A"}
     ]
 
 spec :: Spec
-spec = describe "Validation test2" $ do
+spec = describe "Validation test 2" $ do
 
   it "Validation failed" $ do
-    result <- withValidation' outerValidator pure invalidOuter
+    result <- withValidation outerValidator pure invalidOuter
     case result of
       SuccessResult _                   -> fail "Unexpected success"
       ErrorResult errMsg validationErrs -> do
-        errMsg `shouldBe` "Validation failed."
+        errMsg `shouldBe` ""
         validationErrs `shouldBe` (outerValidationErrors ++ innerValidationErrors)
-        print validationErrs
 
   it "Always valid validator" $ do
-    result <- withValidation' valid pure invalidInner
+    let result = applyValidator alwaysValid "" invalidInner
     case result of
       ErrorResult errMsg validationErrs -> fail "Unexpected failure"
       SuccessResult r                   -> r `shouldBe` invalidInner
