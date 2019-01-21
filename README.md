@@ -77,8 +77,8 @@ are combined with the combinator `(&.)`:
 validator :: Validator MyDataType
 validator = validator $ \val -> MyDataType
     <$> (val ^. intField'
-            &  condition (> 0)   "intField: should be > 100"
-            &. condition (< 100) "intField: should be < 200"
+            &  condition (> 100) "intField: should be > 100"
+            &. condition (< 200) "intField: should be < 200"
         )
 ```
 
