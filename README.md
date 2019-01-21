@@ -112,7 +112,7 @@ type ErrorMessage = Text
 -- | A single validation error type.
 data ValidationError = ValidationError
     { path         :: Path
-      -- ^ Path to the invalid field througth a structure.
+      -- ^ Path to the invalid field through a structure.
       -- Example: ["Outer","innerField","Inner","intField1"]
       -- `Outer` and `Inner` are type names
       -- `innerField`, `intField1` are field names.
@@ -169,6 +169,8 @@ makePointedGetters ''Outer
 User's validators.
 
 ```haskell
+-- mbField', intField1' etc. are "pointed getters"
+
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
     <$> (inner ^. mbField'   & condition "Inner mbField: should be Just a" isJust)
