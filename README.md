@@ -176,7 +176,7 @@ invalidInner = Inner
 invalidOuter :: Outer
 invalidOuter = Outer
     { _intField    = 0             -- invalid (should be > 0)
-    , _stringField = "AbbA"        -- invalid (should not start end end by 'A')
+    , _stringField = "AbbA"        -- invalid (should not start or end by 'A')
     , _innerField  = invalidInner  -- invalid internal structure
     }
 
