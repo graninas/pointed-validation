@@ -2,11 +2,9 @@
 
 An approach to data validation that is:
 - Applicative: collects validation errors of the value.
-- Universal: respects data types of any structure*.
+- Universal: respects data types of any structure.
 - Pointed: marks a path to the error through fields using pointed getters.
 - Combinatorial: compose bigger validators from smaller ones.
-
-( * ) _It currently supports only a limited set of data types._
 
 ---
 
