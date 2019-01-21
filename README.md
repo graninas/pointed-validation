@@ -6,67 +6,63 @@ An approach to data validation that is:
 - Pointed: marks a path to the error through fields using pointed getters.
 - Combinatorial: compose bigger validators from smaller ones.
 
-(*) _It currently supports only a limited set of data types._
+( * ) _It currently supports only a limited set of data types._
 
 ---
 
 - [Validation](#Validation)
   - [Intro](#Intro)
-  - [Result types](#Result-types)
-  - [Basic validators](#Basic-validators)
-- [Example](#Example)
+  - [Basic usage](#basic-usage)
+  - [Nested structures validation](#Nested structures validation)
 
 # Validation
 
 ### Intro
 
-Validation is used to check whether some data matches some expectations.
+Validation is used to check whether some data matches your expectations.
 For example, it's often needed to check whether the network method got
-a valid value or it's invalid and we should not process it further.
-The calling side is also interested in getting validation errors.
+a value that is should not be processed. The calling side is also interested
+in getting validation errors about this malformed value.
 
-A malformed value can have several errors, so it's wise to show them all
-rather than pop errors one-by-one. This means, the value should be checked
-by multiple validation functions and the errors should be collected.
+A value can have several errors, so it's wise to show them all
+rather than pop one-by-one. This means, the value should be checked
+by multiple validation functions with the errors collected.
 
-In Haskell, there is approach know as Applicative Validation. There are libraries
-providing basic validation possibilities:
+In Haskell, there is approach known as Applicative Validation.
+There are libraries providing basic validation possibilities:
 
-- [validation](http://hackage.haskell.org/package/validation)
-  Applicative data type for validation. Used in this library.
-- [Data.Either.Validation (either)](http://hackage.haskell.org/package/either-5.0.1/docs/Data-Either-Validation.html)
-  Another data type having almost the same interface as `validation`.
-- [validations (using digestive-functors)](https://github.com/mavenraven/validations)
-  One more implementation of combinatorial validation.
+- [validation](http://hackage.haskell.org/package/validation): applicative validation.
+- [Data.Either.Validation (either)](http://hackage.haskell.org/package/either-5.0.1/docs/Data-Either-Validation.html): another applicative validation that is very close to `validation`.
+- [validations (using digestive-functors)](https://github.com/mavenraven/validations): one more implementation of combinatorial validation.
 
-This package provides some additional features over a regular applicative validation
-but also requires more machinery based on lenses.
+This package provides a further development of the idea of application validation.
+It uses the `validation` and `lens` facilities to allow making validators
+more convenient.
 
 ### Basic usage
 
-To use pointed validation for your data type, you need to create:
+To validate your data type you need to create:
 
 - pointed getters (lenses);
 - validators.
 
-Pointed getters are like normal getter lenses but they also provide a name
-of the field they point to. You can create them manually or use a TH function
-`makePointedGetters`. For example, you have the following data type:
+Pointed getters are like normal getters but they also provide a name
+of the field they point to. You can create them manually or with a TH function
+`makePointedGetters`. Currently, it requires the field-like lenses to be
+in its scope (you can create field-like lenses using `makeFieldsNoPrefix` from the `lens` package.)
+
+Let's assume you have the following data type:
 
 ```haskell
 data MyDataType = MyDataType
     { _intField :: Int
     }
+
+makeFieldsNoPrefix ''MyDataType     -- field-like lenses
+makePointedGetters ''MyDataType     -- pointed getters
 ```
 
-TH function creating a pointed getter for `_intField` will require fields-like lens:
-
-```haskell
-makeFieldsNoPrefix ''MyDataType
-makePointedGetters ''MyDataType
-```
-
-Now you have the following pointed getter function:
+Now you have the following pointed getter:
 
 ```haskell
 intField' :: HasIntField a Int => Getter a (Path, Int)
@@ -75,7 +71,7 @@ intField' = mkPointedGetter "intField" ["intField"] intField
 
 The next step is to create a validator for values of `MyDataType`.
 Suppose, the value should be in the range (100, 200) to be valid.
-You create the following validator:
+The validator will look like the following:
 
 ```haskell
 validator :: Validator MyDataType
@@ -86,65 +82,36 @@ validator = validator $ \val -> MyDataType
         )
 ```
 
-Notice how the two checks are combined: by using a combinator (&.).
-In general, the validator reconstructs your value applicatively,
-that's why you need to pass it to the validator.
+Notice how the two checks are combined with the combinator (&.).
+In fact, the validator reconstructs your value applicatively, so you
+probably don't want to use this kind validation if you need a good performance.
+
+Applying the validator:
 
 ```haskell
 main = do
-  let result = applyValidator alwaysValid "" invalidInner
+  let invalidValue = MyDataType 10
+  let result = applyValidator alwaysValid invalidValue
   case result of
-      ErrorResult _ validationErrs -> print validationErrs
-      SuccessResult r              -> pure ()
+      ErrorResult _ errors -> print errors
+      SuccessResult _      -> putStrLn "Valid."
+
+  -- Output:
+  -- [ ValidationError {path = ["MyDataType","intField"], errorMessage = "intField: should be > 100"}]
 ```
 
-### Result types
+In more complex case you might want to combine two or more validators
+to validate a tree-like data structure.
 
-```haskell
--- | Name of field that is being validated.
-type ValidationPoint = Text
+# Nested structures validation
 
--- | Path to the validation field.
-type Path = [ValidationPoint]
-
-type ErrorMessage = Text
-
--- | A single validation error type.
-data ValidationError = ValidationError
-    { path         :: Path
-      -- ^ Path to the invalid field through a structure.
-      -- Example: ["Outer","innerField","Inner","intField1"]
-      -- `Outer` and `Inner` are type names
-      -- `innerField`, `intField1` are field names.
-    , errorMessage :: ErrorMessage
-      -- ^ Error message.
-    }
-    deriving (Eq, Show, Ord, Generic)
-
--- | Validation errors.
-type ValidationErrors = [ValidationError]
-```
-
-### Basic validators
-
-```haskell
--- | Conditional validator.
--- Checks for validity.
-condition :: ErrorMessage -> (a -> Bool) -> Validator a
-
--- | Treats a field as valid.
--- HasItem is a typeclass for pointed getter.
-valid :: HasItem a b => a -> Validation ValidationErrors b
-```
-
-# Example
-
-Data structures for validation:
+Now we'll create validators for the following two-level structure:
 
 ```haskell
 data Inner = Inner
-    { _mbField   :: Maybe Int
-    , _intField1 :: Int
+    { _mbField    :: Maybe Int
+    , _intField1  :: Int
+    , _tupleField :: (Int, String)
     }
     deriving (Show, Eq)
 
@@ -154,62 +121,83 @@ data Outer = Outer
     , _innerField  :: Inner
     }
     deriving (Show, Eq)
-```
 
-Creating lenses (for convenience) and pointed getters (for building error path):
-
-```haskell
 makeFieldsNoPrefix ''Inner
-makePointedGetters ''Inner      -- Comes with this library
+makePointedGetters ''Inner
 
 makeFieldsNoPrefix ''Outer
 makePointedGetters ''Outer
 ```
 
-User's validators.
+The `Inner` value will be valid if:
+  - `_mbField` is `Just smth`;
+  - `_intField1` is in range (0, 100);
+  - `_tupleField` is always valid.
+
+The `Outer` value will be valid if:
+  - `_intField2` is > 0;
+  - `_stringField` should not start and end by 'A' and should be not null;
+  - `_innerField` should be valid.
+
+Let's create two validators for each structure. Notice how the `_innerField`
+is validated in the `outerValidator`. We need to use the `nested` combinator there
+to apply the `innerValidator`:
 
 ```haskell
--- mbField', intField1' etc. are "pointed getters"
-
 innerValidator :: Validator Inner
 innerValidator = validator $ \inner -> Inner
-    <$> (inner ^. mbField'   & condition "Inner mbField: should be Just a" isJust)
-    <*> (inner ^. intField1' & condition "Inner intField: should be > 0" (> 0))
+    <$> (inner ^. mbField'   & condition isJust "Inner mbField: should be Just a")
+    <*> (inner ^. intField1'
+            &  condition (> 0)   "Inner intField: should be > 0"
+            &. condition (< 100) "Inner intField: should be < 100"
+        )
+    <*> (inner ^. tupleField' & alwaysValid)
 
 outerValidator :: Validator Outer
 outerValidator = validator $ \outer -> Outer
-    <$> (outer ^. intField2'   & condition "Outer intField: should be > 0" (> 0))
-    <*> (outer ^. stringField' & condition "Outer stringField: should be not empty" (not . null))
+    <$> (outer ^. intField2' & condition (> 0) "Outer intField: should be > 0")
+    <*> (outer ^. stringField'
+          &  condition (checkNotStarts 'A') "Outer stringField: should not start from A"
+          &. condition (checkNotEnds   'A') "Outer stringField: should not end by A"
+          &. condition (not . null)         "Outer stringField: should not be null"
+        )
     <*> (nested outer innerField' innerValidator)
+  where
+    checkNotStarts ch []      = True
+    checkNotStarts ch (ch':_) = ch' /= ch
+    checkNotEnds   ch []  = True
+    checkNotEnds   ch chs = last chs /= ch
 ```
 
-Here how the values can be construct and validated:
+Applying the `outerValidator` has no surprises:
 
 ```haskell
 invalidInner :: Inner
 invalidInner = Inner
-    { _mbField   = Just 10    -- valid
+    { _mbField   = Just 10    -- valid   (should be Just)
     , _intField1 = 0          -- invalid (should be > 0)
+    , _tupleField = (1, "A")  -- always valid
     }
 
 invalidOuter :: Outer
 invalidOuter = Outer
     { _intField2   = 0             -- invalid (should be > 0)
-    , _stringField = ""            -- invalid (should be not null)
-    , _innerField  = invalidInner  -- invalid innternal structure
+    , _stringField = "AbbA"        -- invalid (should not start end end by 'A')
+    , _innerField  = invalidInner  -- invalid internal structure
     }
 
 -- Validation. Can be pure or impure.
 main = do
-    result <- withValidation' outerValidator pure invalidOuter
+    let result = applyValidator outerValidator invalidOuter
     case result of
-      SuccessResult _              -> putStrLn "Valid."
-      ErrorResult _ validationErrs -> print validationErrs
+      SuccessResult _      -> putStrLn "Valid."
+      ErrorResult _ errors -> print errors
 
--- Will print validationErrs:
+-- Output:
 --
--- [ ValidationError {path = ["Outer","intField2"], errorMessage = "Outer intField: should be > 0"}
--- , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should be not empty"}
--- , ValidationError {path = ["Outer","innerField","Inner","intField1"], errorMessage = "Inner intField: should be > 0"}
+-- [ ValidationError { path = ["Outer","innerField","Inner","intField1"], errorMessage = "Inner intField: should be > 0"}
+-- , ValidationError {path = ["Outer","intField2"],   errorMessage = "Outer intField: should be > 0"}
+-- , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not start from A"}
+-- , ValidationError {path = ["Outer","stringField"], errorMessage = "Outer stringField: should not end by A"}
 -- ]
 ```

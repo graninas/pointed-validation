@@ -71,7 +71,7 @@ invalidOuter :: Outer
 invalidOuter = Outer
     { _intField2   = 0             -- invalid (should be > 0)
     , _stringField = "AbbA"        -- invalid (should not start end end by 'A')
-    , _innerField  = invalidInner  -- invalid innternal structure
+    , _innerField  = invalidInner  -- invalid internal structure
     }
 
 innerValidationErrors =
