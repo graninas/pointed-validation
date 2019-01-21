@@ -109,15 +109,13 @@ data Inner = Inner
     , _intField   :: Int
     , _tupleField :: (Int, String)
     }
-    deriving (Show, Eq)
-
+    
 data Outer = Outer
     { _intField    :: Int
     , _stringField :: String
     , _innerField  :: Inner
     }
-    deriving (Show, Eq)
-
+    
 makeFieldsNoPrefix ''Inner
 makePointedGetters ''Inner
 
