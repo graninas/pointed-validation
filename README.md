@@ -11,7 +11,7 @@ An approach to data validation that is:
 - [Validation](#Validation)
   - [Intro](#Intro)
   - [Basic usage](#basic-usage)
-  - [Nested structures validation](#Nested structures validation)
+  - [Nested structures validation](#Nested-structures-validation)
 - [Limitations](#limitations)
 
 # Validation
