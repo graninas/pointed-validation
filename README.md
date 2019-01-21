@@ -165,7 +165,7 @@ outerValidator = validator $ \outer -> Outer
     checkNotEnds   ch chs = last chs /= ch
 ```
 
-Applying the `outerValidator` has no surprises:
+Applying the `outerValidator`:
 
 ```haskell
 invalidInner :: Inner
