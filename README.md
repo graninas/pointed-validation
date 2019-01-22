@@ -74,8 +74,8 @@ The validator will look like the following, notice how the two checks
 are combined with the combinator `(&.)`:
 
 ```haskell
-validator :: Validator MyDataType
-validator = validator $ \val -> MyDataType
+myValidator :: Validator MyDataType
+myValidator = validator $ \val -> MyDataType
     <$> (val ^. intField'
             &  condition (> 100) "intField: should be > 100"
             &. condition (< 200) "intField: should be < 200"
@@ -87,7 +87,7 @@ Applying the validator:
 ```haskell
 main = do
   let invalidValue = MyDataType 10
-  let result = applyValidator validator invalidValue
+  let result = applyValidator myValidator invalidValue
   case result of
       ErrorResult _ errors -> print errors
       SuccessResult _      -> putStrLn "Valid."
