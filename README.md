@@ -180,7 +180,6 @@ invalidOuter = Outer
     , _innerField  = invalidInner  -- invalid internal structure
     }
 
--- Validation. Can be pure or impure.
 main = do
     let result = applyValidator outerValidator invalidOuter
     case result of
@@ -198,6 +197,7 @@ main = do
 
 # Limitations
 
+- Only pure validation.
 - Requires `makeFieldsNoPrefix`.
 - Fields with the same name should have the same type.
   - Alternatively, such pointed getters can be created in different scopes and imported with qualification.
