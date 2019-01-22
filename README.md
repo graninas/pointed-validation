@@ -34,7 +34,7 @@ There are libraries providing basic validation possibilities:
 - [Data.Either.Validation (either)](http://hackage.haskell.org/package/either-5.0.1/docs/Data-Either-Validation.html): another applicative validation that is very close to `validation`.
 - [validations (using digestive-functors)](https://github.com/mavenraven/validations): one more implementation of combinatorial validation.
 
-This package provides a further development of the idea of application validation.
+This package provides a further development of the idea of applicative validation.
 It uses the `validation` and `lens` facilities to allow making validators
 more convenient.
 
@@ -87,7 +87,7 @@ Applying the validator:
 ```haskell
 main = do
   let invalidValue = MyDataType 10
-  let result = applyValidator alwaysValid invalidValue
+  let result = applyValidator validator invalidValue
   case result of
       ErrorResult _ errors -> print errors
       SuccessResult _      -> putStrLn "Valid."
