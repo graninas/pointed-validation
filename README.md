@@ -198,6 +198,6 @@ main = do
 # Limitations
 
 - Only pure validation.
-- Requires `makeFieldsNoPrefix`.
+- Requires `makeFieldsNoPrefix` (or rather manual `HaxField` type class and instances).
 - Fields with the same name should have the same type.
   - Alternatively, such pointed getters can be created in different scopes and imported with qualification.
