@@ -33,7 +33,8 @@ There are libraries providing basic validation possibilities:
 - [validation](http://hackage.haskell.org/package/validation): applicative validation.
 - [Data.Either.Validation (either)](http://hackage.haskell.org/package/either-5.0.1/docs/Data-Either-Validation.html): another applicative validation that is very close to `validation`.
 - [validations (using digestive-functors)](https://github.com/mavenraven/validations): one more implementation of combinatorial validation.
-
+- [validation-selective](https://github.com/kowainik/validation-selective): Lightweight pure data validation based on Applicative and Selective functors.
+  
 This package provides a further development of the idea of applicative validation.
 It uses the `validation` and `lens` facilities to allow making validators
 more convenient.
